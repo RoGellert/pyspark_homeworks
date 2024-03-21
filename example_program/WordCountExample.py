@@ -4,6 +4,7 @@ import os
 import random as rand
 
 
+# finally works
 def word_count_per_doc(document, F=-1):
 		pairs_dict = {}
 		for word in document.split(' '):
@@ -14,7 +15,7 @@ def word_count_per_doc(document, F=-1):
 		if F == -1:
 			return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
 		else:
-			return [(rand.randint(0,F-1),(key, pairs_dict[key])) for key in pairs_dict.keys()]
+			return [(rand.randint(0, F-1), (key, pairs_dict[key])) for key in pairs_dict.keys()]
 
 
 def gather_pairs(pairs):
@@ -46,7 +47,7 @@ def word_count_1(docs):
 
 
 def word_count_2(docs, K):
-	word_count = (docs.flatMap(lambda x: word_count_per_doc(x, K)) # <-- MAP PHASE (R1)
+	word_count = (docs.flatMap(lambda x: word_count_per_doc(x, K))  # <-- MAP PHASE (R1)
 				 .groupByKey()                            # <-- SHUFFLE+GROUPING
 				 .flatMap(gather_pairs)                   # <-- REDUCE PHASE (R1)
 				 .reduceByKey(lambda x, y: x + y))        # <-- REDUCE PHASE (R2)
@@ -71,13 +72,13 @@ def word_count_with_partition(docs):
 
 
 def main():
-
 	# CHECKING NUMBER OF CMD LINE PARAMTERS
 	assert len(sys.argv) == 3, "Usage: python WordCountExample.py <K> <file_name>"
 
 	# SPARK SETUP
 	conf = SparkConf().setAppName('WordCountExample')
 	sc = SparkContext(conf=conf)
+	sc.setLogLevel("WARN")
 
 	# INPUT READING
 
@@ -95,7 +96,7 @@ def main():
 	numdocs = docs.count()
 	print("Number of documents = ", numdocs)
 
-	# 1-ROUND WORD COUNT 
+	# 1-ROUND WORD COUNT
 	print("Number of distinct words in the documents =", word_count_1(docs).count())
 
 	# 2-ROUND WORD COUNT - RANDOM KEYS ASSIGNED IN MAP PHASE
