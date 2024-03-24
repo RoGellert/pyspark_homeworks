@@ -1,5 +1,4 @@
 from pyspark import SparkContext, SparkConf
-import random
 import numpy as np
 import sys
 import os
@@ -73,7 +72,7 @@ def ExactOutliers(inputPoints, D, M, K):
         i += 1
 
 
-def MRApproxOutliers(inputPoints, D, M, K, L):
+def MRApproxOutliers(inputPoints, D, M, K):
     # STEP A
     cells = (inputPoints
              .map(lambda x: points_to_cells(x, D))
@@ -116,6 +115,10 @@ def MRApproxOutliers(inputPoints, D, M, K, L):
 
     print(f"Sure outliers : {sure_outlier_count}")
     print(f"Uncertain points : {uncertain_point_count}")
+
+    sorted_cells = cells.sortBy(lambda x: x[1]).take(20)
+    for i in sorted_cells:
+        print(f"id = {i[0]}, number of points = {i[1]}")
 
 
 def main():
@@ -174,9 +177,14 @@ def main():
         ExactOutliers(listOfPoints, D, M, K)
         end = time.time()
 
-        print(f"Execution time: {end - start} seconds")
+        print(f"Execution time of the Brute Force algorithm: {end - start} seconds")
 
-    MRApproxOutliers(inputPoints, D, M, K, L)
+    # RUN APPROXIMATE ALGORITHM
+    start = time.time()
+    MRApproxOutliers(inputPoints, D, M, K)
+    end = time.time()
+
+    print(f"Execution time of the approximate algorithm: {end - start} seconds")
 
 
 if __name__ == "__main__":
