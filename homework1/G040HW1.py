@@ -1,13 +1,34 @@
-import numpy
 from pyspark import SparkContext, SparkConf
+import random
 import numpy as np
 import sys
 import os
 import time
+import math
 
 
-def string_to_coordinates(doc):
-    doc_list = doc.split(',')
+def points_to_cells(point, D):
+    cell_side = D/(2*math.sqrt(2))
+
+    i = math.floor(point[0]/cell_side)
+    j = math.floor(point[1]/cell_side)
+
+    return i, j
+
+
+def cell_count(points):
+    count = {}
+    for point in points:
+        if point not in count:
+            count[point] = 1
+        else:
+            count[point] += 1
+
+    return [(i, count[i]) for i in count]
+
+
+def string_to_coordinates(point):
+    doc_list = point.split(',')
     return [float(doc_list[0]), float(doc_list[1])]
 
 
@@ -15,23 +36,23 @@ def euclidian_distance(point1, point2):
     return np.linalg.norm(point1 - point2)
 
 
-def ExactOutliers(points, d, m, k):
+def ExactOutliers(inputPoints, D, M, K):
     # GET NUMBER OF POINTS
-    points = np.array(points)
-    n = points.shape[0]
+    inputPoints = np.array(inputPoints)
+    n = inputPoints.shape[0]
 
     # INITIALIZE AND ARRAY TO STORE THE NUMBER OF NEIGHBORING POINTS
-    neighbour_count = numpy.zeros(n)
+    neighbour_count = np.zeros(n)
 
     # COUNT THE NUMBER OF NEIGHBORING POINTS
     for i in range(n):
         for j in range(i+1, n):
-            if euclidian_distance(points[i], points[j]) <= d:
+            if euclidian_distance(inputPoints[i], inputPoints[j]) <= D:
                 neighbour_count[i] += 1
                 neighbour_count[j] += 1
 
     # ZIP POINTS AND COUNTS TO SORT
-    points_zip = zip(points, neighbour_count)
+    points_zip = zip(inputPoints, neighbour_count)
     points_zip = sorted(points_zip, key=lambda x: x[1])
     # for i in points_zip:
     #     print(i[1])
@@ -39,16 +60,62 @@ def ExactOutliers(points, d, m, k):
     # COUNT THE NUMBER OF OUTLIERS
     outlier_count = 0
     i = 0
-    while i < n and points_zip[i][1] <= m:
+    while i < n and points_zip[i][1] <= M:
         outlier_count += 1
         i += 1
+
     print(f"Number of outliers: {outlier_count}")
 
     # PRINT K FIRST OUTLIERS
     i = 0
-    while i < outlier_count and i < k:
+    while i < outlier_count and i < K:
         print(points_zip[i][0])
         i += 1
+
+
+def MRApproxOutliers(inputPoints, D, M, K, L):
+    # STEP A
+    cells = (inputPoints
+             .map(lambda x: points_to_cells(x, D))
+             .mapPartitions(cell_count)
+             .reduceByKey(lambda x, y: x + y)
+             .cache())
+
+    # STEP B
+    cells_list = cells.collect()
+
+    n = len(cells_list)
+    n_3_neighbour_count = np.zeros(n)
+    n_7_neighbour_count = np.zeros(n)
+    for i in range(n):
+        n_3_neighbour_count[i] += cells_list[i][1]
+        n_7_neighbour_count[i] += cells_list[i][1]
+        for j in range(i+1, n):
+            dist_x = abs(cells_list[j][0][0] - cells_list[i][0][0])
+            dist_y = abs(cells_list[j][0][1] - cells_list[i][0][1])
+            if dist_x <= 1 and dist_y <= 1:
+                n_3_neighbour_count[i] += cells_list[j][1]
+                n_3_neighbour_count[j] += cells_list[i][1]
+            elif dist_x <= 3 and dist_y <= 3:
+                n_7_neighbour_count[i] += cells_list[j][1]
+                n_7_neighbour_count[j] += cells_list[i][1]
+
+    print(n_3_neighbour_count)
+    print(n_7_neighbour_count)
+
+    sure_outlier_count = 0
+    uncertain_point_count = 0
+
+    for i in range(n):
+        if n_3_neighbour_count[i] > M:
+            continue
+        if n_7_neighbour_count[i] <= M:
+            sure_outlier_count += 1
+        elif n_3_neighbour_count[i] <= M < n_7_neighbour_count[i]:
+            uncertain_point_count += 1
+
+    print(f"Sure outliers : {sure_outlier_count}")
+    print(f"Uncertain points : {uncertain_point_count}")
 
 
 def main():
@@ -100,11 +167,16 @@ def main():
     listOfPoints = inputPoints.collect()
 
     # RUN BRUTE FORCE ALGORITHM
-    start = time.time()
     if count <= 200000:
+        listOfPoints = inputPoints.collect()
+
+        start = time.time()
         ExactOutliers(listOfPoints, D, M, K)
-    end = time.time()
-    print(f"Execution time: {end - start} seconds")
+        end = time.time()
+
+        print(f"Execution time: {end - start} seconds")
+
+    MRApproxOutliers(inputPoints, D, M, K, L)
 
 
 if __name__ == "__main__":
