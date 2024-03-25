@@ -116,7 +116,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
     print(f"Sure outliers : {sure_outlier_count}")
     print(f"Uncertain points : {uncertain_point_count}")
 
-    sorted_cells = cells.sortBy(lambda x: x[1]).take(20)
+    sorted_cells = cells.sortBy(lambda x: x[1]).take(K)
     for i in sorted_cells:
         print(f"id = {i[0]}, number of points = {i[1]}")
 
