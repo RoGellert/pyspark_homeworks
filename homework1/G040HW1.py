@@ -38,7 +38,7 @@ def ExactOutliers(inputPoints, D, M, K):
     n = inputPoints.shape[0]
 
     # INITIALIZE AND ARRAY TO STORE THE NUMBER OF NEIGHBORING POINTS
-    neighbour_count = np.zeros(n)
+    neighbour_count = np.ones(n)
 
     # COUNT THE NUMBER OF NEIGHBORING POINTS
     for i in range(n):
@@ -65,7 +65,7 @@ def ExactOutliers(inputPoints, D, M, K):
     # PRINT K FIRST OUTLIERS
     i = 0
     while i < outlier_count and i < K:
-        print(points_zip[i][0])
+        print(f"Point: ({points_zip[i][0][0]},{points_zip[i][0][1]})")
         i += 1
 
 
@@ -93,12 +93,11 @@ def MRApproxOutliers(inputPoints, D, M, K):
             if dist_x <= 1 and dist_y <= 1:
                 n_3_neighbour_count[i] += cells_list[j][1]
                 n_3_neighbour_count[j] += cells_list[i][1]
+                n_7_neighbour_count[i] += cells_list[j][1]
+                n_7_neighbour_count[j] += cells_list[i][1]
             elif dist_x <= 3 and dist_y <= 3:
                 n_7_neighbour_count[i] += cells_list[j][1]
                 n_7_neighbour_count[j] += cells_list[i][1]
-
-    print(n_3_neighbour_count)
-    print(n_7_neighbour_count)
 
     sure_outlier_count = 0
     uncertain_point_count = 0
@@ -117,7 +116,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
 
     sorted_cells = cells.sortBy(lambda x: x[1]).take(K)
     for i in sorted_cells:
-        print(f"id = {i[0]}, number of points = {i[1]}")
+        print(f"Cell: ({i[0][0]},{i[0][1]})  Size = {i[1]}")
 
 
 def main():
