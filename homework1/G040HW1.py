@@ -6,12 +6,9 @@ import time
 import math
 
 
-def points_to_cells(point, D):
-    cell_side = D/(2*math.sqrt(2))
-
+def points_to_cells(point, cell_side):
     i = math.floor(point[0]/cell_side)
     j = math.floor(point[1]/cell_side)
-
     return i, j
 
 
@@ -74,8 +71,9 @@ def ExactOutliers(inputPoints, D, M, K):
 
 def MRApproxOutliers(inputPoints, D, M, K):
     # STEP A
+    cell_side = D/(2*math.sqrt(2))
     cells = (inputPoints
-             .map(lambda x: points_to_cells(x, D))
+             .map(lambda x: points_to_cells(x, cell_side))
              .mapPartitions(cell_count)
              .reduceByKey(lambda x, y: x + y)
              .cache())
@@ -113,8 +111,9 @@ def MRApproxOutliers(inputPoints, D, M, K):
         elif n_3_neighbour_count[i] <= M < n_7_neighbour_count[i]:
             uncertain_point_count += 1
 
-    print(f"Sure outliers : {sure_outlier_count}")
-    print(f"Uncertain points : {uncertain_point_count}")
+    # PRINTING SURE OUTLIERS AND UNCERTAIN POINTS
+    print(f"Number of sure outliers = {sure_outlier_count}")
+    print(f"Number of uncertain points = {uncertain_point_count}")
 
     sorted_cells = cells.sortBy(lambda x: x[1]).take(K)
     for i in sorted_cells:
@@ -152,10 +151,13 @@ def main():
     assert K.isdigit(), "K is invalid"
     K = int(K)
 
-    # PARSE D
+    # PARSE L
     L = sys.argv[5]
     assert L.isdigit(), "L is invalid"
     L = int(L)
+
+    # PRINT CONSOLE ARGUMENTS
+    print(f"{path} D={D} M={M} K={K} L={L}")
 
     # READ INPUT FILE
     inputPoints = (sc.textFile(path, minPartitions=L)
@@ -164,27 +166,26 @@ def main():
 
     # COUNT THE NUMBER OF POINTS
     count = inputPoints.count()
-    print(inputPoints.collect())
 
-    # CONVERT RDD INTO LIST
-    listOfPoints = inputPoints.collect()
+    # PRINTING THE NUMBER OF POINTS
+    print(f"Number of points = {count}")
 
     # RUN BRUTE FORCE ALGORITHM
     if count <= 200000:
         listOfPoints = inputPoints.collect()
 
-        start = time.time()
+        start = time.time() * 1000
         ExactOutliers(listOfPoints, D, M, K)
-        end = time.time()
+        end = time.time() * 1000
 
-        print(f"Execution time of the Brute Force algorithm: {end - start} seconds")
+        print(f"Running time of ExactOutliers = {round(end - start)} ms")
 
     # RUN APPROXIMATE ALGORITHM
-    start = time.time()
+    start = time.time() * 1000
     MRApproxOutliers(inputPoints, D, M, K)
-    end = time.time()
+    end = time.time() * 1000
 
-    print(f"Execution time of the approximate algorithm: {end - start} seconds")
+    print(f"Running time of MRApproxOutliers = {round(end - start)} ms")
 
 
 if __name__ == "__main__":
