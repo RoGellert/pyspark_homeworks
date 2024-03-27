@@ -114,9 +114,12 @@ def MRApproxOutliers(inputPoints, D, M, K):
     print(f"Number of sure outliers = {sure_outlier_count}")
     print(f"Number of uncertain points = {uncertain_point_count}")
 
-    sorted_cells = cells.sortBy(lambda x: x[1]).take(K)
+    # sorted_cells = cells.sortBy(lambda x: x[1]).take(K)
+    # for i in sorted_cells:
+    #     print(f"Cell: ({i[0][0]},{i[0][1]})  Size = {i[1]}")
+    sorted_cells = cells.map(lambda x: (x[1], x[0])).sortByKey().take(K)
     for i in sorted_cells:
-        print(f"Cell: ({i[0][0]},{i[0][1]})  Size = {i[1]}")
+        print(f"Cell: ({i[1][0]},{i[1][1]})  Size = {i[0]}")
 
 
 def main():
@@ -124,6 +127,9 @@ def main():
     conf = SparkConf().setAppName('G040HW1')
     sc = SparkContext(conf=conf)
     sc.setLogLevel("OFF")
+
+    # SET UP THE MAX NUMBER OF POINTS TO RUN BRUTE FORCE ALGORITHM ON
+    max_brute_force_num = 16
 
     # CHECK THE NUMBER OF CMD LINE PARAMETERS
     assert len(sys.argv) == 6, "Usage: python G04HW1.py <file_name> <D> <M> <K> <L>"
@@ -170,7 +176,7 @@ def main():
     print(f"Number of points = {count}")
 
     # RUN BRUTE FORCE ALGORITHM
-    if count <= 200000:
+    if count <= max_brute_force_num:
         listOfPoints = inputPoints.collect()
 
         start = time.time() * 1000
