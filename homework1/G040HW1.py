@@ -93,9 +93,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
             if dist_x <= 1 and dist_y <= 1:
                 n_3_neighbour_count[i] += cells_list[j][1]
                 n_3_neighbour_count[j] += cells_list[i][1]
-                n_7_neighbour_count[i] += cells_list[j][1]
-                n_7_neighbour_count[j] += cells_list[i][1]
-            elif dist_x <= 3 and dist_y <= 3:
+            if dist_x <= 3 and dist_y <= 3:
                 n_7_neighbour_count[i] += cells_list[j][1]
                 n_7_neighbour_count[j] += cells_list[i][1]
 
