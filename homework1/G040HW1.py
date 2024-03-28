@@ -104,9 +104,9 @@ def MRApproxOutliers(inputPoints, D, M, K):
         if n_3_neighbour_count[i] > M:
             continue
         if n_7_neighbour_count[i] <= M:
-            sure_outlier_count += 1
+            sure_outlier_count += cells_list[i][1]
         elif n_3_neighbour_count[i] <= M < n_7_neighbour_count[i]:
-            uncertain_point_count += 1
+            uncertain_point_count += cells_list[i][1]
 
     # PRINTING SURE OUTLIERS AND UNCERTAIN POINTS
     print(f"Number of sure outliers = {sure_outlier_count}")
