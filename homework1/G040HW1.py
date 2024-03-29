@@ -28,8 +28,11 @@ def string_to_coordinates(point):
     return [float(doc_list[0]), float(doc_list[1])]
 
 
-def euclidian_distance(point1, point2):
-    return np.linalg.norm(point1 - point2)
+# def euclidian_distance(point1, point2):
+    # return np.linalg.norm(point1 - point2)
+
+def euclidian_distance_squared(point1, point2):
+    return np.sum(np.square(point1 - point2))
 
 
 def ExactOutliers(inputPoints, D, M, K):
@@ -37,21 +40,20 @@ def ExactOutliers(inputPoints, D, M, K):
     inputPoints = np.array(inputPoints)
     n = inputPoints.shape[0]
 
-    # INITIALIZE AND ARRAY TO STORE THE NUMBER OF NEIGHBORING POINTS
+    # INITIALIZE AN ARRAY TO STORE THE NUMBER OF NEIGHBORING POINTS
     neighbour_count = np.ones(n)
 
     # COUNT THE NUMBER OF NEIGHBORING POINTS
+    distance_squared = D**2
     for i in range(n):
         for j in range(i+1, n):
-            if euclidian_distance(inputPoints[i], inputPoints[j]) <= D:
+            if euclidian_distance_squared(inputPoints[i], inputPoints[j]) <= distance_squared:
                 neighbour_count[i] += 1
                 neighbour_count[j] += 1
 
     # ZIP POINTS AND COUNTS TO SORT
     points_zip = zip(inputPoints, neighbour_count)
     points_zip = sorted(points_zip, key=lambda x: x[1])
-    # for i in points_zip:
-    #     print(i[1])
 
     # COUNT THE NUMBER OF OUTLIERS
     outlier_count = 0
@@ -81,6 +83,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
     # STEP B
     cells_list = cells.collect()
 
+    # COUNTING NUMBER OF POINTS IN N_3 AND N_7 REGIONS OF CELLS
     n = len(cells_list)
     n_3_neighbour_count = np.zeros(n)
     n_7_neighbour_count = np.zeros(n)
@@ -97,6 +100,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
                 n_7_neighbour_count[i] += cells_list[j][1]
                 n_7_neighbour_count[j] += cells_list[i][1]
 
+    # COUNTING SURE AND UNCERTAIN POINTS
     sure_outlier_count = 0
     uncertain_point_count = 0
 
@@ -112,9 +116,7 @@ def MRApproxOutliers(inputPoints, D, M, K):
     print(f"Number of sure outliers = {sure_outlier_count}")
     print(f"Number of uncertain points = {uncertain_point_count}")
 
-    # sorted_cells = cells.sortBy(lambda x: x[1]).take(K)
-    # for i in sorted_cells:
-    #     print(f"Cell: ({i[0][0]},{i[0][1]})  Size = {i[1]}")
+    # SORTING THE CELLS AND PRINTING K CELLS WITH THE LEAST NUMBER OF POINTS
     sorted_cells = cells.map(lambda x: (x[1], x[0])).sortByKey().take(K)
     for i in sorted_cells:
         print(f"Cell: ({i[1][0]},{i[1][1]})  Size = {i[0]}")
@@ -127,7 +129,7 @@ def main():
     sc.setLogLevel("OFF")
 
     # SET UP THE MAX NUMBER OF POINTS TO RUN BRUTE FORCE ALGORITHM ON
-    max_brute_force_num = 16
+    max_brute_force_num = 20000
 
     # CHECK THE NUMBER OF CMD LINE PARAMETERS
     assert len(sys.argv) == 6, "Usage: python G04HW1.py <file_name> <D> <M> <K> <L>"
