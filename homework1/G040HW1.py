@@ -28,9 +28,6 @@ def string_to_coordinates(point):
     return [float(doc_list[0]), float(doc_list[1])]
 
 
-# def euclidian_distance(point1, point2):
-    # return np.linalg.norm(point1 - point2)
-
 def euclidian_distance_squared(point1, point2):
     return np.sum(np.square(point1 - point2))
 
@@ -129,7 +126,7 @@ def main():
     sc.setLogLevel("OFF")
 
     # SET UP THE MAX NUMBER OF POINTS TO RUN BRUTE FORCE ALGORITHM ON
-    max_brute_force_num = 20000
+    max_brute_force_num = 200000
 
     # CHECK THE NUMBER OF CMD LINE PARAMETERS
     assert len(sys.argv) == 6, "Usage: python G04HW1.py <file_name> <D> <M> <K> <L>"
@@ -165,7 +162,8 @@ def main():
     print(f"{path} D={D} M={M} K={K} L={L}")
 
     # READ INPUT FILE
-    inputPoints = (sc.textFile(path, minPartitions=L)
+    rawData = sc.textFile(path, minPartitions=L)
+    inputPoints = (rawData
                    .map(string_to_coordinates)
                    .repartition(numPartitions=L).cache())
 
