@@ -29,7 +29,7 @@ def string_to_coordinates(point):
 
 
 def euclidian_distance_squared(point1, point2):
-    return np.sum(np.square(point1 - point2))
+    return np.sum(np.square(np.array(point1) - np.array(point2)))
 
 
 def MRApproxOutliers(inputPoints, D, M):
@@ -78,13 +78,52 @@ def MRApproxOutliers(inputPoints, D, M):
     print(f"Number of uncertain points = {uncertain_point_count}")
 
 
-def SequentialFFT(points, K):
-    C = [points[0]]
+def SequentialFFT(P, K):
+    """Implements Sequential FFT algorithm to find k clusters in points."""
+    P = list(P)
+    n = len(P)
+    C = np.zeros((K, 2))
+    distances = np.full(n, np.inf)
+
+    for i in range(K):
+        cluster_idx = np.argmax(distances)
+        C[i] = P[cluster_idx]
+
+        for j in range(n):
+            distances[j] = np.min([euclidian_distance_squared(C[i], P[j]), distances[j]])
+
+    return C.tolist()
+
+
+def distance_to_cluster(point, global_centers):
+    return np.min([euclidian_distance_squared(point, i) for i in global_centers])
+
+
+def MRFFT(P, K):
+    # ROUND 1
+    start = time.time() * 1000
+    partition_centers = P.mapPartitions(lambda x: SequentialFFT(x, K)).collect()
+    end = time.time() * 1000
+    print(f"Running time of MRFFT Round 1 = {round(end - start)} ms")
+
+    # ROUND 2
+    start = time.time() * 1000
+    global_centers = SequentialFFT(partition_centers, K)
+    end = time.time() * 1000
+    print(f"Running time of MRFFT Round 2 = {round(end - start)} ms")
+
+    # ROUND 3
+    start = time.time() * 1000
+    R = P.map(lambda x: distance_to_cluster(x, global_centers)).max()
+    end = time.time() * 1000
+    print(f"Running time of MRFFT Round 3 = {round(end - start)} ms")
+
+    return R
 
 
 def main():
     # SPARK SETUP
-    conf = SparkConf().setAppName('G040HW2')
+    conf = SparkConf().setAppName('G040HW2').set("spark.locality.wait", "0s")
     sc = SparkContext(conf=conf)
     sc.setLogLevel("OFF")
 
@@ -93,24 +132,21 @@ def main():
 
     # PARSE FILE NAME
     path = sys.argv[1]
-    assert os.path.isfile(path), "File or folder not found"
-
-    # PARSE D
-    M = sys.argv[2]
-    try:
-        M = float(M)
-    except ValueError:
-        print("D is invalid")
-        raise
+    # assert os.path.isfile(path), "File or folder not found"
 
     # PARSE M
-    K = sys.argv[3]
-    assert K.isdigit(), "M is invalid"
-    K = int(K)
+    M = sys.argv[2]
+    assert M.isdigit(), "M is invalid"
+    M = int(M)
 
     # PARSE K
+    K = sys.argv[3]
+    assert K.isdigit(), "K is invalid"
+    K = int(K)
+
+    # PARSE L
     L = sys.argv[4]
-    assert L.isdigit(), "K is invalid"
+    assert L.isdigit(), "L is invalid"
     L = int(L)
 
     # PRINT CONSOLE ARGUMENTS
@@ -118,6 +154,8 @@ def main():
 
     # READ INPUT FILE
     rawData = sc.textFile(path, minPartitions=L)
+
+    # P
     inputPoints = (rawData
                    .map(string_to_coordinates)
                    .repartition(numPartitions=L).cache())
@@ -127,13 +165,18 @@ def main():
 
     # PRINTING THE NUMBER OF POINTS
     print(f"Number of points = {count}")
+    #print(SequentialFFT(inputPoints.collect(), K))
+
+    R = MRFFT(inputPoints, K)
+
+    print(f"Radius = {R:.8f}")
 
     # RUN APPROXIMATE ALGORITHM
-    # start = time.time() * 1000
-    # MRApproxOutliers(inputPoints, D, M, K)
-    # end = time.time() * 1000
+    start = time.time() * 1000
+    MRApproxOutliers(inputPoints, R, M)
+    end = time.time() * 1000
 
-    # print(f"Running time of MRApproxOutliers = {round(end - start)} ms")
+    print(f"Running time of MRApproxOutliers = {round(end - start)} ms")
 
 
 if __name__ == "__main__":
