@@ -167,9 +167,10 @@ def main():
     print(f"Number of points = {count}")
     #print(SequentialFFT(inputPoints.collect(), K))
 
+    # GETTING DISTANCE SQUARED
     R = MRFFT(inputPoints, K)
 
-    print(f"Radius = {R:.8f}")
+    print(f"Radius = {np.sqrt(R):.8f}")
 
     # RUN APPROXIMATE ALGORITHM
     start = time.time() * 1000
