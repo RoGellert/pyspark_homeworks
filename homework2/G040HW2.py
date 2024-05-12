@@ -29,7 +29,7 @@ def string_to_coordinates(point):
 
 
 def euclidian_distance_squared(point1, point2):
-    return np.sum(np.square(np.array(point1) - np.array(point2)))
+    return np.sum(np.square(point1 - point2))
 
 
 def MRApproxOutliers(inputPoints, D, M):
@@ -80,19 +80,21 @@ def MRApproxOutliers(inputPoints, D, M):
 
 def SequentialFFT(P, K):
     """Implements Sequential FFT algorithm to find k clusters in points."""
-    P = list(P)
+    P = np.array(list(P))
     n = len(P)
     C = np.zeros((K, 2))
     distances = np.full(n, np.inf)
+    cluster_idx_rand = np.random.randint(n, size=1).item()
+    C[0] = P[cluster_idx_rand]
 
-    for i in range(K):
+    for i in range(1, K):
+        for j in range(n):
+            distances[j] = np.min([euclidian_distance_squared(C[i-1], P[j]), distances[j]])
+
         cluster_idx = np.argmax(distances)
         C[i] = P[cluster_idx]
 
-        for j in range(n):
-            distances[j] = np.min([euclidian_distance_squared(C[i], P[j]), distances[j]])
-
-    return C.tolist()
+    return C
 
 
 def distance_to_cluster(point, global_centers):
@@ -118,7 +120,7 @@ def MRFFT(P, K):
     end = time.time() * 1000
     print(f"Running time of MRFFT Round 3 = {round(end - start)} ms")
 
-    return R
+    return np.sqrt(R)
 
 
 def main():
@@ -165,12 +167,11 @@ def main():
 
     # PRINTING THE NUMBER OF POINTS
     print(f"Number of points = {count}")
-    #print(SequentialFFT(inputPoints.collect(), K))
 
     # GETTING DISTANCE SQUARED
     R = MRFFT(inputPoints, K)
 
-    print(f"Radius = {np.sqrt(R):.8f}")
+    print(f"Radius = {R:.8f}")
 
     # RUN APPROXIMATE ALGORITHM
     start = time.time() * 1000
