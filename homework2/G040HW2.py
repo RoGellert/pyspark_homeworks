@@ -79,14 +79,16 @@ def MRApproxOutliers(inputPoints, D, M):
 
 
 def SequentialFFT(P, K):
-    """Implements Sequential FFT algorithm to find k clusters in points."""
     P = np.array(list(P))
     n = len(P)
     C = np.zeros((K, 2))
     distances = np.full(n, np.inf)
+
+    # INITIALIZING AN ARBITRARY POINT
     cluster_idx_rand = np.random.randint(n, size=1).item()
     C[0] = P[cluster_idx_rand]
 
+    # FINDING DISTANCES AND FARTHEST POINTS
     for i in range(1, K):
         for j in range(n):
             distances[j] = np.min([euclidian_distance_squared(C[i-1], P[j]), distances[j]])
