@@ -6,14 +6,18 @@ import sys
 import math
 import random
 
-n = -1  # To be set via command line
+n = -1
 streamLength = [-1]
+
 m = -1
 reservoir_t = [-1]
 
+r = -0.1
+sampling_rate = -0.1
+
 
 def process_batch(time, batch):
-    global streamLength, exactHistogram
+    global streamLength, exactHistogram, reservoir_t, reservoir, sticky_hashmap
     batch_size = batch.count()
 
     if streamLength[0] >= n:
@@ -27,7 +31,6 @@ def process_batch(time, batch):
 
     # Extract the distinct items from the batch
     batch_items = batch.map(lambda elem: int(elem)).take(elements_to_take)
-    # batch_items = batch.map(lambda elem: int(elem)).collect()[0:elements_to_take]
 
     for i in batch_items:
         if i not in exactHistogram:
@@ -40,12 +43,17 @@ def process_batch(time, batch):
         if len(reservoir) < m:
             reservoir.append(i)
         else:
-            chance = m / reservoir_t[0]
+            chance = m/reservoir_t[0]
             rand = random.random()
             if rand <= chance:
                 reservoir[random.randint(0, m-1)] = i
 
     for i in batch_items:
+        if i not in sticky_hashmap:
+            if random.random() <= sampling_rate:
+                sticky_hashmap[i] = 1
+        else:
+            sticky_hashmap[i] += 1
 
     if streamLength[0] >= n:
         stopping_condition.set()
@@ -111,7 +119,8 @@ if __name__ == '__main__':
     reservoir_t = [0]
 
     sticky_hashmap = {}
-    r = math.log(1)
+    r = math.log(1/(phi * delta))/epsilon
+    sampling_rate = r/n
 
     # DEFINE STREAM
     stream = ssc.socketTextStream("algo.dei.unipd.it", portExp, StorageLevel.MEMORY_AND_DISK)
@@ -151,3 +160,15 @@ if __name__ == '__main__':
     print(f"Estimated frequent items:")
     for i in unique_reservoir_items_list:
         print(f"{i} {'+' if i in exactFrequentItemsSet else '-'}")
+
+    print("STICKY SAMPLING")
+    sticky_hashmap_length = len(sticky_hashmap)
+    boundary = (phi-epsilon)*n
+    sticky_hashmap_items = [i for i in sticky_hashmap.items() if i[1] >= boundary]
+    sticky_hashmap_items = [i[0] for i in sticky_hashmap_items]
+    sticky_hashmap_items.sort()
+    print(f"Number of items in the Hash Table = {sticky_hashmap_length}")
+    print(f"Number of estimated frequent items = {len(sticky_hashmap_items)}")
+    print(f"Estimated frequent items:")
+    for i in sticky_hashmap_items:
+        print(f"{i} {'+' if i in sticky_hashmap_items else '-'}")
