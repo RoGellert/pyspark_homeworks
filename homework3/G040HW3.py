@@ -33,22 +33,23 @@ def process_batch(time, batch):
     batch_items = batch.map(lambda elem: int(elem)).take(elements_to_take)
 
     for i in batch_items:
+        # EXACT
         if i not in exactHistogram:
             exactHistogram[i] = 1
         else:
             exactHistogram[i] += 1
 
-    for i in batch_items:
+        # RESERVOIR
         reservoir_t[0] += 1
         if len(reservoir) < m:
             reservoir.append(i)
         else:
-            chance = m/reservoir_t[0]
+            chance = m / reservoir_t[0]
             rand = random.random()
             if rand <= chance:
-                reservoir[random.randint(0, m-1)] = i
+                reservoir[random.randint(0, m - 1)] = i
 
-    for i in batch_items:
+        # STICKY
         if i not in sticky_hashmap:
             if random.random() <= sampling_rate:
                 sticky_hashmap[i] = 1
@@ -126,31 +127,28 @@ if __name__ == '__main__':
     stream = ssc.socketTextStream("algo.dei.unipd.it", portExp, StorageLevel.MEMORY_AND_DISK)
     stream.foreachRDD(lambda time, batch: process_batch(time, batch))
 
-    # print("Starting streaming engine")
     ssc.start()
-    # print("Waiting for shutdown condition")
     stopping_condition.wait()
-    # print("Stopping the streaming engine")
     ssc.stop(False, False)
-    # print("Streaming engine stopped")
 
     # PRINT CONSOLE ARGUMENTS
     print("INPUT PROPERTIES")
     print(f"n = {n} phi = {phi} epsilon = {epsilon} delta = {delta} port = {portExp}")
 
-    print("EXACT ALGORITHM")
+    # EXACT FREQUENT ELEMENTS
     exactHistogramLength = len(exactHistogram)
     exactFrequentItems = [i for i in exactHistogram.items() if i[1]/n >= phi]
     exactFrequentItems = [i[0] for i in exactFrequentItems]
     exactFrequentItems.sort()
     exactFrequentItemsSet = set(exactFrequentItems)
-
+    print("EXACT ALGORITHM")
     print(f"Number of items in the data structure = {exactHistogramLength}")
     print(f"Number of true frequent items = {len(exactFrequentItems)}")
     print("True frequent items:")
     for i in exactFrequentItems:
         print(i)
 
+    # RESERVOIR FREQUENT ELEMENTS
     unique_reservoir_items = set(reservoir)
     unique_reservoir_items_list = list(unique_reservoir_items)
     unique_reservoir_items_list.sort()
@@ -161,14 +159,15 @@ if __name__ == '__main__':
     for i in unique_reservoir_items_list:
         print(f"{i} {'+' if i in exactFrequentItemsSet else '-'}")
 
-    print("STICKY SAMPLING")
+    # STICKY FREQUENT ELEMENTS
     sticky_hashmap_length = len(sticky_hashmap)
     boundary = (phi-epsilon)*n
     sticky_hashmap_items = [i for i in sticky_hashmap.items() if i[1] >= boundary]
     sticky_hashmap_items = [i[0] for i in sticky_hashmap_items]
     sticky_hashmap_items.sort()
+    print("STICKY SAMPLING")
     print(f"Number of items in the Hash Table = {sticky_hashmap_length}")
     print(f"Number of estimated frequent items = {len(sticky_hashmap_items)}")
     print(f"Estimated frequent items:")
     for i in sticky_hashmap_items:
-        print(f"{i} {'+' if i in sticky_hashmap_items else '-'}")
+        print(f"{i} {'+' if i in exactFrequentItemsSet else '-'}")
