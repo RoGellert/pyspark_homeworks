@@ -1,7 +1,1 @@
-# Guys clone this repo
-
----
-
-https://spark.apache.org/docs/latest/api/python/reference/index.html
-
- -_-
+# Repo for Big Data homework files
